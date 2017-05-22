@@ -1,0 +1,32 @@
+- name: build docker app 
+  hosts: bogon
+  sudo: True
+  vars:
+    app_name: member
+    app_port: 8184:8084    
+  tasks:
+    - name: rm container.
+      shell: 'docker rm -f {{app_name}}'
+      ignore_errors: True
+      register: rm_container
+      tags:
+        - dockerapp
+    - name: rm images
+      shell: 'docker rmi -f {{app_name}}'
+      ignore_errors: True
+      when: rm_container|changed == True
+      register: rm_images
+      tags:
+        - dockerapp
+    - name: build images
+      shell: 'docker build -t {{app_name}} /var/javaweb/docker/pft/docker-member/'
+      when: rm_images|changed == True
+      register: build_images
+      tags:
+        - dockerapp
+    - name: run app
+      shell: 'docker run -it -d -p {{app_port}} --name {{app_name}} {{app_name}}'
+      when: build_images|changed == True
+      register: run_app
+      tags:
+        - dockerapp

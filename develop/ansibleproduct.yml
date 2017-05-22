@@ -1,0 +1,26 @@
+- name: install product app 
+  hosts: bogon
+  sudo: True
+  vars:
+    app_name: pft-product
+    base_app: "{{app_name}}-base"   
+    vsersion: 1.0.1-SNAPSHOT
+    file_name: "{{app_name}}-{{vsersion}}.war"
+    war_file: "/var/lib/jenkins/workspace/develop-{{app_name}}/target/{{file_name}}" #local file
+    app_root: /home/pft/develop/{{base_app}}/webapps/ROOT 
+  tasks:
+    - name: stop jetty.
+      action: shell {{ app_root }}/../../bin/stop.sh
+    - name: unarchive war.
+      unarchive: 
+        src: "{{ war_file }}"
+        dest: "{{ app_root }}"
+        copy: yes
+      register: unarchive_war
+      tags:
+        - jetty
+    - name: start jetty.
+      action: shell {{ app_root }}/../../bin/start.sh
+      when: unarchive_war|changed == True
+      tags:
+        - jetty

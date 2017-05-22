@@ -1,0 +1,44 @@
+- name: install jetty app 
+  hosts: bogon
+  sudo: True
+  vars:
+    app_name: pft-product
+    base_app: "{{app_name}}-base"
+    file_name: "{{app_name}}.war"
+    vsersion: 1.0.1-RELEASE
+    war_file: /tmp/{{file_name}} #local file
+    app_root: /home/pft/{{base_app}}/webapps/ROOT 
+  tasks:
+    - name: stop jetty.
+      action: shell {{ app_root }}/../../bin/stop.sh
+    - name: Download webapps
+      shell: 'wget http://192.168.20.144:8181/nexus/content/repositories/releases/com/pft/{{app_name}}/{{vsersion}}/{{app_name}}-{{vsersion}}.war
+        -O /tmp/{{file_name}} creates=/tmp/{{file_name}}'
+      register: app_downloaded
+      tags:
+        - jetty   
+    - name: rm ROOT.
+      file: 
+        state: absent
+        dest: "{{ app_root }}"
+    - name: mkdir ROOT.
+      file:
+        state: directory
+        dest: "{{ app_root }}"
+        owner: root
+        group: root
+        mode: 755
+    - name: unzip war.      
+      shell: unzip /tmp/{{file_name}} chdir=/home/pft/{{base_app}}/webapps/ROOT/
+      when: app_downloaded|changed == True
+      register: unzip_war
+      tags:
+        - jetty
+    - name: rm war.      
+      shell: rm -rf /tmp/{{file_name}}
+      when: unzip_war|changed == True
+      tags:
+        - jetty
+    - name: start jetty.
+      action: shell {{ app_root }}/../../bin/start.sh
+
